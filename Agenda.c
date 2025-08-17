@@ -1,24 +1,76 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-//variável global com o número do último contato/a quantidade 
+
+// variável global para contar contatos
 int n_contatos = 0;
 
-// struct da agenda
+// struct para armazenar dados da agenda
 typedef struct {
     char nome[129];
     int id, telefone;
 } Agenda;
 
-// inserir novo contato
+// função para salvar todos os contatos em arquivo CSV
+void salvar_contatos(Agenda contatos[]) {
+    FILE *f = fopen("agenda.csv", "w"); // sobrescreve o arquivo
+    if (f == NULL) {
+        printf("Falhou bobão abuh bleh.\n");
+        return;
+    }
+
+    for (int i = 0; i < n_contatos; i++) {
+        if(contatos[i].id > 0) { // só grava contatos ativos
+            fprintf(f, "%d,%s,%d\n", contatos[i].id, contatos[i].nome, contatos[i].telefone);
+        }
+    }
+
+    fclose(f);
+}
+
+// função para carregar contatos do arquivo CSV
+void carregar_contatos(Agenda contatos[]) {
+    FILE *f = fopen("agenda.csv", "r");
+    if (f == NULL) {
+        printf("Achei o arquivo nãooo\n");
+        return;
+    }
+
+    int id_lido;
+    char nome_lido[129];
+    int telefone_lido;
+
+    while (fscanf(f, "%d,%128[^,],%d\n", &id_lido, nome_lido, &telefone_lido) == 3) {
+        int pos = id_lido - 1;
+        contatos[pos].id = id_lido;
+        strcpy(contatos[pos].nome, nome_lido);
+        contatos[pos].telefone = telefone_lido;
+
+        if (pos + 1 > n_contatos) {
+            n_contatos = pos + 1;
+        }
+
+        for(int i=0; i<n_contatos; i++){
+            if(contatos[i].id==0){
+                contatos[i].id=-1;
+            }
+        }
+    }
+
+    fclose(f);
+}
+
+// função para inserir novo contato
 void inserir_contato(Agenda contatos[]) {
     int contato_vago;
+
+    // procura posição vaga para inserir
     for (int i = 0; i <= n_contatos; i++) {
         if (contatos[i].id == -1) {
             n_contatos--;
             contato_vago = i;
             break;
-        } else if (i == n_contatos) {
+        } else if (i == n_contatos) { 
             contato_vago = i;
             break;
         }
@@ -53,9 +105,12 @@ void inserir_contato(Agenda contatos[]) {
     printf("Nome: %s\nId:%d\nTelefone: %d", contatos[contato_vago].nome, contatos[contato_vago].id, contatos[contato_vago].telefone);
 
     n_contatos++;
+
+    // salva após inserir
+    salvar_contatos(contatos);
 }
 
-// função para apagar 
+// função para apagar contato
 void apagar_contato(Agenda contatos[]) {
     char entrada[129];
     printf("\nDigite os dados de alguém: ");
@@ -65,7 +120,7 @@ void apagar_contato(Agenda contatos[]) {
     int id_final = 100;
     double entrada_num = atoi(entrada);
 
-    // procura contato
+    // procura contatos
     for (int i = 0; i < n_contatos; i++) {
         if (entrada_num == contatos[i].telefone || entrada_num == contatos[i].id || strcmp(entrada, contatos[i].nome) == 0) {
             quantidade_contatos++;
@@ -92,11 +147,14 @@ void apagar_contato(Agenda contatos[]) {
         }
     }
 
-    // marca contato como -1(deixa inativo fi)
+    // marca contato como excluído
     contatos[id_final - 1].id = -1;
+
+    // salva após excluir
+    salvar_contatos(contatos);
 }
 
-// função para buscar contato
+// buscar contato
 void buscar_contato(Agenda contatos[]) {
     char pesquisa[129];
     printf("\nDigite os dados de alguém: ");
@@ -112,23 +170,25 @@ void buscar_contato(Agenda contatos[]) {
     }
 }
 
-// função para listar os trem 
+// função para listar todos os contatos
 void listar_contatos(Agenda contatos[]) {
     for (int i = 0; i < n_contatos; i++) {
-        printf("\n-------------------------------");
-        if (contatos[i].id > 0) { // só mostra contatos ativos
+
+        if (contatos[i].id > 0) {
+            printf("\n-------------------------------");
             printf("\nNome: %s\nId: %d\nTelefone: %d", contatos[i].nome, contatos[i].id, contatos[i].telefone);
         }
-        
     }
 }
-//tudo organizadinho aqui embaixo
+
 int main() {
     Agenda contatos[100] = {0};
     int menu = 0;
 
+    carregar_contatos(contatos);
+
     do {
-        printf("\n-------------MENU-------------");
+        printf("\n\n-------------MENU-------------");
         printf("\n1) Inserir um novo contato\n");
         printf("2) Apagar um contato\n");
         printf("3) Buscar por um contato seja por telefone ou nome\n");
@@ -157,10 +217,11 @@ int main() {
             case 5:
                 break;
         }
-    } while (menu > 5 || menu < 1);
+    } while (menu != 5);
 
     return 0;
 }
+
 /*
   ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⠀⠀⠀⠀⠀⠀⠀⡄⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣤⣿⠛⣿⠀⠀⠀⠀⣤⣿⢻⡇⠀
